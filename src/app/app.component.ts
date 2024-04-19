@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -9,6 +9,10 @@ import GeoJSON from 'ol/format/GeoJSON';
 import Style from 'ol/style/Style';
 import Icon from 'ol/style/Icon';
 import VectorImageLayer from 'ol/layer/VectorImage';
+import Geolocation from 'ol/Geolocation';
+import { Feature } from 'ol';
+import { Point } from 'ol/geom';
+import VectorLayer from 'ol/layer/Vector';
 
 @Component({
   selector: 'app-root',
@@ -17,22 +21,53 @@ import VectorImageLayer from 'ol/layer/VectorImage';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class AppComponent implements OnInit{
+export class AppComponent implements OnInit {
   title = 'GrandTheftAutoZagrebCity';
 
   map!: Map;
 
-  ngOnInit() {
-    this.initMap();
+  cursorX = 0;
+  cursorY = 0;
 
-    this.map.on('click', function (evt) {
-      var coordinate = evt.coordinate;
-      console.log(coordinate);
-    });
-
-    this.initIcons();
+  @HostListener('mousemove', ['$event'])
+  onMousemove(event: MouseEvent): void {
+    event.stopPropagation();
+    this.cursorX = event.pageX;
+    this.cursorY = event.pageY;
   }
 
+  ngOnInit() {
+
+    this.playSoundtrack();
+    
+    this.initMap();
+
+    this.initIcons();
+
+    this.getDeviceLocationAndTrack();
+
+    this.map.on('click',  (evt) => {
+      var coordinate = evt.coordinate;
+      console.log(coordinate);
+      this.playMenuSound();
+    });
+  }
+
+  playSoundtrack(){
+    let audio = new Audio();
+    audio.src = "assets/GTASAsong.mp3";
+    audio.load();
+    audio.volume = 0.5;
+    audio.play();
+  }
+
+  playMenuSound(){
+    let audio = new Audio();
+    audio.src = "assets/GTASAmenu.mp3";
+    audio.load();
+    audio.play();
+  }
+  
   initMap() {
     this.map = new Map({
       layers: [
@@ -46,10 +81,10 @@ export class AppComponent implements OnInit{
         }),
       ],
       target: 'map',
-      view: new View({ 
+      view: new View({
         center: [1768687.3333925947, 5749030.256367761],
         zoom: 14.4,
-        maxZoom: 15.5, 
+        maxZoom: 15.5,
         minZoom: 14.4,
         extent: [1762487.693591883, 5741008.714568317, 1796069.3338692044, 5763937.770888929]
       }),
@@ -60,7 +95,7 @@ export class AppComponent implements OnInit{
     const iconStyle = function (feature: any) {
       const iconName = feature.get('icon');
       const iconNameString = iconName.toString();
-      
+
       const styles = [
         new Style({
           image: new Icon({
@@ -82,6 +117,43 @@ export class AppComponent implements OnInit{
     });
 
     this.map.addLayer(icons);
+  }
+
+  getDeviceLocationAndTrack() {
+    // Inicializacija geolokacije
+    const geolocation = new Geolocation({
+      tracking: true,
+      trackingOptions: {
+        enableHighAccuracy: true,
+        maximumAge: 2000
+      },
+      projection: this.map.getView().getProjection()
+    });
+
+    // Dodaavanje markera na mapu
+    const playerPositionMarker: any = new VectorLayer({
+      source: new Vector({
+        features: [new Feature({
+          geometry: new Point([1768687.3333925947, 5749030.256367761]),
+        })]
+      }),
+      style: new Style({
+        image: new Icon({
+          anchor: [0.5, 1],
+          src: `assets/icons/PlayerPosition.png`,
+          scale: 1.8
+        })
+      })
+    });
+    this.map.addLayer(playerPositionMarker);
+
+    // Azuriranje pozicije
+    geolocation.on('change:position', () => {
+      const coordinates: any = geolocation.getPosition();
+      const playerPosition = new Point(coordinates);
+      playerPositionMarker.getSource().clear(true);
+      playerPositionMarker.getSource().addFeature(new Feature(playerPosition));
+    });
   }
 
 }
