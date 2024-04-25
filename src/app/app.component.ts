@@ -29,6 +29,10 @@ export class AppComponent implements OnInit {
   cursorX = 0;
   cursorY = 0;
 
+  soundtrack: any;
+  key = '';
+  music = true;
+
   @HostListener('mousemove', ['$event'])
   onMousemove(event: MouseEvent): void {
     event.stopPropagation();
@@ -36,9 +40,17 @@ export class AppComponent implements OnInit {
     this.cursorY = event.pageY;
   }
 
+  @HostListener('document:keypress', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent) { 
+    this.key = event.key;
+    if(this.key == 'm' || this.key == 'M'){
+      this.toggleSoundtrack();
+    }
+  }
+
   ngOnInit() {
 
-    this.playSoundtrack();
+    // this.playSoundtrack();
     
     this.initMap();
 
@@ -54,11 +66,21 @@ export class AppComponent implements OnInit {
   }
 
   playSoundtrack(){
-    let audio = new Audio();
-    audio.src = "assets/GTASAsong.mp3";
-    audio.load();
-    audio.volume = 0.5;
-    audio.play();
+    this.soundtrack = new Audio();
+    this.soundtrack.src = "assets/GTASAsong.mp3";
+    this.soundtrack.load();
+    this.soundtrack.volume = 0.5;
+    this.soundtrack.play();
+  }
+
+  toggleSoundtrack(){
+    if(this.music){
+      this.music = false;
+      this.soundtrack.pause();
+    } else {
+      this.music = true;
+      this.soundtrack.play();
+    }
   }
 
   playMenuSound(){
@@ -86,7 +108,7 @@ export class AppComponent implements OnInit {
         zoom: 14.4,
         maxZoom: 15.5,
         minZoom: 14.4,
-        extent: [1762487.693591883, 5741008.714568317, 1796069.3338692044, 5763937.770888929]
+        extent: [1762487.693591883, 5741008.714568317, 1796069.3338692044, 5763937.770888929],
       }),
     });
   }
